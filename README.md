@@ -130,9 +130,11 @@ sc project/
 PORT=5000
 MONGODB_URI=mongodb://127.0.0.1:27017/student_course_db
 CLIENT_URL=http://localhost:5173
-JWT_SECRET=student_course_management_jwt_secret_dev_key_2026
+JWT_SECRET=your_secure_random_jwt_secret_here
 JWT_EXPIRES_IN=1d
 NODE_ENV=development
+ADMIN_EMAIL=admin@example.com
+ADMIN_PASSWORD=your_secure_admin_password_here
 ```
 
 ### Frontend (`client/.env`)

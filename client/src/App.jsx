@@ -6,7 +6,7 @@ import Courses from './components/Courses';
 import MyCourses from './components/MyCourses';
 import AdminDashboard from './components/AdminDashboard';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000').replace(/\/$/, '');
 
 function App() {
   // Navigation View: 'home' | 'courses' | 'mycourses' | 'profile' | 'forgot-password' | 'admin'

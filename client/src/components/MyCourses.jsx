@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000').replace(/\/$/, '');
 
 function MyCourses({ token, onRequireLogin, onNavigateToCourses }) {
   const [enrolledCourses, setEnrolledCourses] = useState([]);

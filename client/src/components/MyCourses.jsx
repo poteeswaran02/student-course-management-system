@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { getCourseThumbnail } from '../utils/courseImages';
+import { ClockIcon, CloseIcon } from './Icons';
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000').replace(/\/$/, '');
 
@@ -6,6 +8,7 @@ function MyCourses({ token, onRequireLogin, onNavigateToCourses }) {
   const [enrolledCourses, setEnrolledCourses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [learningCourseModal, setLearningCourseModal] = useState(null);
 
   const fetchMyCourses = async () => {
     if (!token) {
@@ -26,7 +29,7 @@ function MyCourses({ token, onRequireLogin, onNavigateToCourses }) {
 
       if (!response.ok) {
         if (response.status === 401) {
-          setError('Your session has expired or is unauthorized. Please sign in again.');
+          setError('Your session has expired. Please sign in again.');
           if (onRequireLogin) onRequireLogin();
           return;
         }
@@ -45,7 +48,6 @@ function MyCourses({ token, onRequireLogin, onNavigateToCourses }) {
     fetchMyCourses();
   }, [token]);
 
-  // Format date helper (e.g. 17 Sep 2026)
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
     try {
@@ -60,26 +62,34 @@ function MyCourses({ token, onRequireLogin, onNavigateToCourses }) {
     }
   };
 
+  const getInitials = (name) => {
+    if (!name) return 'ED';
+    return name
+      .split(' ')
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0].toUpperCase())
+      .join('');
+  };
+
   return (
-    <div className="container py-2">
-      {/* Header Banner */}
-      <div className="foundation-card p-4 p-md-5 mb-4">
-        <div className="d-flex flex-wrap justify-content-between align-items-center">
-          <div>
-            <h1 className="h2 fw-bold text-white mb-1">My Courses</h1>
-            <p className="text-secondary small mb-0">
-              Track and access your active learning programs and enrollments.
-            </p>
-          </div>
-          <span className="badge bg-primary px-3 py-2">
-            {enrolledCourses.length} {enrolledCourses.length === 1 ? 'Course' : 'Courses'} Enrolled
-          </span>
+    <div>
+      {/* Header */}
+      <div className="d-flex flex-wrap justify-content-between align-items-center mb-4 pb-3 border-bottom gap-2" style={{ borderColor: 'var(--border-color)' }}>
+        <div>
+          <h1 className="h3 fw-bold text-slate-900 mb-1">My Learning</h1>
+          <p className="text-secondary small mb-0">
+            Access your enrolled courses and continue your studies.
+          </p>
         </div>
+        <span className="badge bg-white text-secondary border px-3 py-2 small">
+          {enrolledCourses.length} {enrolledCourses.length === 1 ? 'Enrolled Course' : 'Enrolled Courses'}
+        </span>
       </div>
 
-      {/* Error Alert State */}
+      {/* Error Alert */}
       {error && (
-        <div className="alert alert-danger d-flex align-items-center justify-content-between mb-4" role="alert">
+        <div className="alert alert-danger d-flex flex-wrap align-items-center justify-content-between gap-2 mb-4" role="alert">
           <div>
             <strong>Error: </strong> {error}
           </div>
@@ -96,76 +106,180 @@ function MyCourses({ token, onRequireLogin, onNavigateToCourses }) {
       {/* Loading State */}
       {loading && (
         <div className="text-center py-5">
-          <div className="spinner-border text-primary" role="status"></div>
-          <p className="text-secondary mt-3">Loading your course dashboard...</p>
+          <div className="spinner-border text-secondary" role="status"></div>
+          <p className="text-muted mt-3 small">Loading your enrolled courses...</p>
         </div>
       )}
 
       {/* Empty State */}
       {!loading && !error && enrolledCourses.length === 0 && (
-        <div className="foundation-card text-center py-5 px-4 my-3">
-          <div className="display-6 mb-3">🎓</div>
-          <h3 className="h5 text-white fw-bold">You haven't enrolled in any courses yet.</h3>
-          <p className="text-secondary small max-w-md mx-auto mb-4">
+        <div className="foundation-card text-center py-5 px-3 px-sm-4 my-3">
+          <h2 className="h5 fw-bold mb-2">You haven't enrolled in any courses yet.</h2>
+          <p className="text-secondary small max-w-md mx-auto mb-4" style={{ maxWidth: '440px' }}>
             Explore our course catalog to find topics that match your academic and career goals.
           </p>
           <button
             type="button"
             id="browse-courses-btn"
-            className="btn btn-primary px-4"
+            className="btn btn-accent px-4 py-2"
             onClick={onNavigateToCourses}
           >
-            Browse Available Courses
+            Explore Courses
           </button>
         </div>
       )}
 
       {/* Enrolled Courses Grid */}
       {!loading && !error && enrolledCourses.length > 0 && (
-        <div className="row g-4" id="my-courses-container">
-          {enrolledCourses.map(({ enrollmentId, enrolledAt, course }) => (
-            <div key={enrollmentId} className="col-12 col-md-6 col-lg-4">
-              <div className="card bg-dark border-secondary h-100 shadow-sm transition-hover">
-                <div className="card-body d-flex flex-column p-4">
-                  {/* Category & Duration */}
-                  <div className="d-flex justify-content-between align-items-start mb-2">
-                    <span className="badge-tech small">
-                      {course.category}
-                    </span>
-                    <small className="text-muted">
-                      ⏱ {course.duration || 'Self-paced'}
-                    </small>
+        <div className="row g-3 g-md-4" id="my-courses-container">
+          {enrolledCourses.map(({ enrollmentId, enrolledAt, course }) => {
+            const thumbnail = getCourseThumbnail(course);
+            return (
+              <div key={enrollmentId} className="col-12 col-md-6 col-lg-4">
+                <div className="course-card">
+                  {/* Real Course Thumbnail */}
+                  <div className="course-img-wrapper">
+                    <img
+                      src={thumbnail.src}
+                      alt={thumbnail.alt}
+                      className="course-thumbnail"
+                      loading="lazy"
+                    />
                   </div>
 
-                  {/* Course Title */}
-                  <h2 className="h5 text-white fw-bold mt-2 mb-2">
-                    {course.title}
-                  </h2>
-
-                  {/* Description */}
-                  <p className="text-secondary small flex-grow-1 mb-3">
-                    {course.description}
-                  </p>
-
-                  <hr className="border-secondary my-3" />
-
-                  {/* Instructor & Enrolled Date Footer */}
-                  <div className="d-flex justify-content-between align-items-center">
-                    <div>
-                      <span className="text-muted d-block" style={{ fontSize: '0.75rem' }}>INSTRUCTOR</span>
-                      <strong className="text-light small">{course.instructor}</strong>
-                    </div>
-                    <div className="text-end">
-                      <span className="text-muted d-block" style={{ fontSize: '0.75rem' }}>ENROLLED</span>
-                      <span className="badge bg-success bg-opacity-75 text-white">
-                        {formatDate(enrolledAt)}
+                  <div className="p-3 p-sm-4 d-flex flex-column flex-grow-1">
+                    {/* Status Row */}
+                    <div className="d-flex align-items-center justify-content-between mb-2">
+                      <span className="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 small">
+                        Enrolled
                       </span>
+                      <div className="small text-muted d-flex align-items-center gap-1">
+                        <ClockIcon size={14} />
+                        <span>{course.duration || 'Self-paced'}</span>
+                      </div>
+                    </div>
+
+                    {/* Course Title */}
+                    <h3 className="course-title-text text-break-word">
+                      {course.title}
+                    </h3>
+
+                    {/* Description */}
+                    <p className="course-desc-text line-clamp-2 text-break-word flex-grow-1">
+                      {course.description}
+                    </p>
+
+                    {/* Instructor & Enrolled Date */}
+                    <div className="d-flex align-items-center justify-content-between pt-2 pb-3 mb-3 border-top" style={{ borderColor: 'var(--border-color)' }}>
+                      <div className="d-flex align-items-center gap-2 text-truncate" style={{ maxWidth: '65%' }}>
+                        <span className="avatar-initials">
+                          {getInitials(course.instructor)}
+                        </span>
+                        <span className="small text-truncate text-secondary fw-medium">
+                          {course.instructor}
+                        </span>
+                      </div>
+                      <div className="small text-muted text-nowrap">
+                        Joined: {formatDate(enrolledAt)}
+                      </div>
+                    </div>
+
+                    {/* Continue Action */}
+                    <div className="pt-2 border-top mt-auto" style={{ borderColor: 'var(--border-color)' }}>
+                      <button
+                        type="button"
+                        className="btn btn-accent btn-sm w-100"
+                        onClick={() => setLearningCourseModal({ course, enrolledAt })}
+                      >
+                        Continue Course
+                      </button>
                     </div>
                   </div>
                 </div>
               </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Continue Learning Preview Modal */}
+      {learningCourseModal && (
+        <div
+          className="modal show d-block"
+          tabIndex="-1"
+          style={{ backgroundColor: 'rgba(31, 41, 55, 0.6)' }}
+          role="dialog"
+          aria-modal="true"
+        >
+          <div className="modal-dialog modal-dialog-centered modal-lg mx-2 mx-sm-auto">
+            <div className="modal-content">
+              <div className="modal-header d-flex justify-content-between align-items-start">
+                <div>
+                  <span className="course-category-tag mb-1 d-inline-block">
+                    {learningCourseModal.course.category}
+                  </span>
+                  <h4 className="modal-title fw-bold text-slate-900 mb-0">
+                    {learningCourseModal.course.title}
+                  </h4>
+                </div>
+                <button
+                  type="button"
+                  className="btn btn-link p-1 text-muted"
+                  onClick={() => setLearningCourseModal(null)}
+                  aria-label="Close"
+                >
+                  <CloseIcon size={20} />
+                </button>
+              </div>
+
+              <div className="modal-body p-3 p-sm-4">
+                <div className="alert alert-success mb-4">
+                  Enrolled on <strong>{formatDate(learningCourseModal.enrolledAt)}</strong>. All modules and learning materials are unlocked for your student account.
+                </div>
+
+                <h5 className="h6 text-uppercase fw-bold text-slate-900 mb-3" style={{ letterSpacing: '0.05em' }}>
+                  Curriculum Modules
+                </h5>
+                <div className="list-group mb-4">
+                  <div className="list-group-item d-flex justify-content-between align-items-center">
+                    <div>
+                      <strong className="d-block text-slate-900">Module 1: Orientation & Foundations</strong>
+                      <small className="text-muted">Environment setup, toolchain configuration, and fundamentals</small>
+                    </div>
+                    <span className="badge bg-success">Active</span>
+                  </div>
+                  <div className="list-group-item d-flex justify-content-between align-items-center">
+                    <div>
+                      <strong className="d-block text-slate-900">Module 2: Practical Implementation</strong>
+                      <small className="text-muted">Guided walkthroughs, coding exercises, and pattern design</small>
+                    </div>
+                    <span className="badge bg-primary">In Progress</span>
+                  </div>
+                  <div className="list-group-item d-flex justify-content-between align-items-center">
+                    <div>
+                      <strong className="d-block text-slate-900">Module 3: Advanced Architecture & Production</strong>
+                      <small className="text-muted">Security standards, integration testing, and deployment</small>
+                    </div>
+                    <span className="badge bg-light text-secondary border">Upcoming</span>
+                  </div>
+                </div>
+
+                <div className="p-3 rounded bg-light border text-muted small">
+                  <strong>Instructor: </strong> {learningCourseModal.course.instructor} • Discussion forums and office hours available via your student portal.
+                </div>
+              </div>
+
+              <div className="modal-footer">
+                <button
+                  type="button"
+                  className="btn btn-neutral btn-sm"
+                  onClick={() => setLearningCourseModal(null)}
+                >
+                  Close
+                </button>
+              </div>
             </div>
-          ))}
+          </div>
         </div>
       )}
     </div>

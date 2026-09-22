@@ -12,7 +12,6 @@ function Profile({ token, onLogout }) {
   const [errorMsg, setErrorMsg] = useState('');
   const [fieldErrors, setFieldErrors] = useState({});
 
-  // Fetch student profile on mount
   useEffect(() => {
     fetchProfile();
   }, [token]);
@@ -31,7 +30,7 @@ function Profile({ token, onLogout }) {
 
       if (!response.ok) {
         if (response.status === 401) {
-          setErrorMsg('Session expired or unauthorized. Please log in again.');
+          setErrorMsg('Session expired. Please log in again.');
           if (onLogout) onLogout();
           return;
         }
@@ -97,7 +96,7 @@ function Profile({ token, onLogout }) {
       setProfile(data.user);
       setName(data.user.name);
       setEmail(data.user.email);
-      setSuccessMsg('Profile updated successfully!');
+      setSuccessMsg('Profile updated successfully.');
     } catch (err) {
       setErrorMsg(err.message || 'Update failed.');
     } finally {
@@ -105,11 +104,21 @@ function Profile({ token, onLogout }) {
     }
   };
 
+  const getInitials = (userName) => {
+    if (!userName) return 'ST';
+    return userName
+      .split(' ')
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0].toUpperCase())
+      .join('');
+  };
+
   if (loading) {
     return (
       <div className="text-center py-5">
-        <div className="spinner-border text-primary" role="status"></div>
-        <p className="text-muted mt-3">Loading your student profile...</p>
+        <div className="spinner-border text-secondary" role="status"></div>
+        <p className="text-muted mt-3 small">Loading your profile...</p>
       </div>
     );
   }
@@ -118,41 +127,52 @@ function Profile({ token, onLogout }) {
     <div className="row justify-content-center">
       <div className="col-12 col-md-8 col-lg-6">
         <div className="foundation-card p-4 p-md-5">
-          <div className="d-flex justify-content-between align-items-center mb-4">
-            <div>
-              <h2 className="h4 text-white fw-bold mb-1">Student Profile</h2>
-              <p className="text-secondary small mb-0">View and update your student account details</p>
+          {/* Header Banner */}
+          <div className="d-flex align-items-center gap-3 pb-4 mb-4 border-bottom" style={{ borderColor: 'var(--border-color)' }}>
+            <div
+              className="avatar-initials"
+              style={{ width: '52px', height: '52px', fontSize: '1.25rem' }}
+            >
+              {getInitials(profile?.name)}
             </div>
-            <span className="badge bg-primary text-uppercase px-3 py-2">
-              {profile?.role || 'Student'}
-            </span>
+            <div>
+              <div className="d-flex align-items-center gap-2">
+                <h1 className="h4 text-slate-900 fw-bold mb-0">{profile?.name || 'Student'}</h1>
+                <span className="badge bg-white text-secondary border text-uppercase" style={{ fontSize: '0.68rem' }}>
+                  {profile?.role || 'Student'}
+                </span>
+              </div>
+              <p className="text-muted small mb-0">{profile?.email}</p>
+            </div>
           </div>
 
-          {/* Feedback Alerts */}
+          <h2 className="h5 fw-bold text-slate-900 mb-3">Account Information</h2>
+
+          {/* Alerts */}
           {successMsg && (
             <div className="alert alert-success alert-dismissible fade show" role="alert">
-              <strong>Success:</strong> {successMsg}
+              <strong>Success: </strong> {successMsg}
               <button type="button" className="btn-close" onClick={() => setSuccessMsg('')}></button>
             </div>
           )}
 
           {errorMsg && (
             <div className="alert alert-danger alert-dismissible fade show" role="alert">
-              <strong>Error:</strong> {errorMsg}
+              <strong>Error: </strong> {errorMsg}
               <button type="button" className="btn-close" onClick={() => setErrorMsg('')}></button>
             </div>
           )}
 
-          {/* Profile Form */}
+          {/* Form */}
           <form onSubmit={handleUpdate} noValidate>
             <div className="mb-3">
-              <label htmlFor="profile-name" className="form-label text-light small fw-semibold">
+              <label htmlFor="profile-name" className="form-label">
                 Full Name
               </label>
               <input
                 type="text"
                 id="profile-name"
-                className={`form-control bg-dark text-white border-secondary ${fieldErrors.name ? 'is-invalid' : ''}`}
+                className={`form-control ${fieldErrors.name ? 'is-invalid' : ''}`}
                 value={name}
                 onChange={(e) => {
                   setName(e.target.value);
@@ -167,13 +187,13 @@ function Profile({ token, onLogout }) {
             </div>
 
             <div className="mb-3">
-              <label htmlFor="profile-email" className="form-label text-light small fw-semibold">
+              <label htmlFor="profile-email" className="form-label">
                 Email Address
               </label>
               <input
                 type="email"
                 id="profile-email"
-                className={`form-control bg-dark text-white border-secondary ${fieldErrors.email ? 'is-invalid' : ''}`}
+                className={`form-control ${fieldErrors.email ? 'is-invalid' : ''}`}
                 value={email}
                 onChange={(e) => {
                   setEmail(e.target.value);
@@ -188,25 +208,25 @@ function Profile({ token, onLogout }) {
             </div>
 
             {/* Read-Only Account Metadata */}
-            <div className="p-3 mb-4 rounded bg-black bg-opacity-25 border border-secondary">
-              <div className="row g-2 text-secondary small">
-                <div className="col-sm-6">
-                  <span>Assigned Role: </span>
-                  <strong className="text-white text-capitalize">{profile?.role}</strong>
+            <div className="p-3 mb-4 rounded bg-light border">
+              <div className="row g-2 text-muted small">
+                <div className="col-12 col-sm-6">
+                  <span>Role: </span>
+                  <strong className="text-slate-900 text-capitalize">{profile?.role}</strong>
                 </div>
-                <div className="col-sm-6">
+                <div className="col-12 col-sm-6">
                   <span>Member Since: </span>
-                  <strong className="text-white">
+                  <strong className="text-slate-900">
                     {profile?.createdAt ? new Date(profile.createdAt).toLocaleDateString() : 'N/A'}
                   </strong>
                 </div>
               </div>
             </div>
 
-            <div className="d-flex gap-2 justify-content-end">
+            <div className="d-flex flex-column flex-sm-row gap-2 justify-content-sm-end pt-2">
               <button
                 type="button"
-                className="btn btn-outline-secondary btn-sm px-3"
+                className="btn btn-neutral btn-sm px-3"
                 onClick={fetchProfile}
                 disabled={saving}
               >
@@ -215,17 +235,10 @@ function Profile({ token, onLogout }) {
               <button
                 type="submit"
                 id="save-profile-btn"
-                className="btn btn-primary btn-sm px-4"
+                className="btn btn-accent btn-sm px-4"
                 disabled={saving}
               >
-                {saving ? (
-                  <>
-                    <span className="spinner-border spinner-border-sm me-2" role="status"></span>
-                    Saving...
-                  </>
-                ) : (
-                  'Save Changes'
-                )}
+                {saving ? 'Saving...' : 'Save Changes'}
               </button>
             </div>
           </form>

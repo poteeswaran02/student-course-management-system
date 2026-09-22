@@ -30,35 +30,34 @@ function ForgotPassword({ onBackToLogin }) {
 
     setLoading(true);
 
-    // Simulate standard request submission UI without faking email transmission
     setTimeout(() => {
       setLoading(false);
       setSubmitted(true);
-    }, 600);
+    }, 450);
   };
 
   return (
-    <div className="row justify-content-center">
+    <div className="row justify-content-center py-4">
       <div className="col-12 col-md-8 col-lg-5">
         <div className="foundation-card p-4 p-md-5">
           <div className="text-center mb-4">
-            <h2 className="h4 text-white fw-bold">Reset Password Request</h2>
-            <p className="text-secondary small">
-              Submit your registered email to initiate an administrative password reset request.
+            <h1 className="h4 text-slate-900 fw-bold mb-1">Reset Password Request</h1>
+            <p className="text-secondary small mb-0">
+              Submit your registered email address to request an administrative password reset.
             </p>
           </div>
 
           {submitted ? (
-            <div className="text-center py-3">
+            <div className="text-center py-2">
               <div className="alert alert-info text-start small mb-4" role="alert">
-                <h6 className="alert-heading fw-bold">Request Logged</h6>
+                <h2 className="h6 fw-bold mb-1">Request Received</h2>
                 <p className="mb-1">
-                  A password reset request for <strong>{email}</strong> has been received by the system.
+                  A password reset request for <strong>{email}</strong> has been logged by the system.
                 </p>
                 <hr className="my-2" />
                 <p className="mb-0 text-muted">
                   <em>
-                    Note: Automated email dispatch is disabled in this environment. Please contact your system administrator or course coordinator with this request.
+                    Note: Automated email dispatch is disabled in this environment. Please reach out to your instructor or system administrator.
                   </em>
                 </p>
               </div>
@@ -67,7 +66,7 @@ function ForgotPassword({ onBackToLogin }) {
                 <button
                   type="button"
                   id="back-to-login-btn"
-                  className="btn btn-outline-primary btn-sm"
+                  className="btn btn-accent btn-sm py-2"
                   onClick={onBackToLogin}
                 >
                   Return to Sign In
@@ -93,13 +92,13 @@ function ForgotPassword({ onBackToLogin }) {
               )}
 
               <div className="mb-3">
-                <label htmlFor="forgot-email" className="form-label text-light small fw-semibold">
-                  Account Email Address
+                <label htmlFor="forgot-email" className="form-label">
+                  Registered Email Address
                 </label>
                 <input
                   type="email"
                   id="forgot-email"
-                  className={`form-control bg-dark text-white border-secondary ${fieldError ? 'is-invalid' : ''}`}
+                  className={`form-control ${fieldError ? 'is-invalid' : ''}`}
                   value={email}
                   onChange={(e) => {
                     setEmail(e.target.value);
@@ -112,8 +111,8 @@ function ForgotPassword({ onBackToLogin }) {
                 {fieldError && (
                   <div className="invalid-feedback">{fieldError}</div>
                 )}
-                <div className="form-text text-secondary small">
-                  Enter the email linked to your student account.
+                <div className="form-text text-muted small">
+                  Enter the email associated with your student account.
                 </div>
               </div>
 
@@ -121,17 +120,10 @@ function ForgotPassword({ onBackToLogin }) {
                 <button
                   type="submit"
                   id="forgot-submit-btn"
-                  className="btn btn-primary"
+                  className="btn btn-accent py-2"
                   disabled={loading}
                 >
-                  {loading ? (
-                    <>
-                      <span className="spinner-border spinner-border-sm me-2" role="status"></span>
-                      Submitting Request...
-                    </>
-                  ) : (
-                    'Submit Request'
-                  )}
+                  {loading ? 'Submitting Request...' : 'Submit Request'}
                 </button>
               </div>
 
@@ -141,7 +133,7 @@ function ForgotPassword({ onBackToLogin }) {
                   className="btn btn-link btn-sm text-secondary text-decoration-none"
                   onClick={onBackToLogin}
                 >
-                  &larr; Back to Sign In
+                  Return to Sign In
                 </button>
               </div>
             </form>

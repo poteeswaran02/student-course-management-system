@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { formatPriceINR } from '../utils/courseImages';
+import { PlusIcon, EditIcon, TrashIcon, CloseIcon } from './Icons';
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000').replace(/\/$/, '');
 
 function AdminDashboard({ token, user, onRequireLogin }) {
-  // Active Admin Sub-tab: 'courses' | 'students'
   const [activeTab, setActiveTab] = useState('courses');
 
   // Courses state
@@ -83,7 +84,6 @@ function AdminDashboard({ token, user, onRequireLogin }) {
     return errs;
   };
 
-
   const showAlert = (message, type = 'success') => {
     setAlert({ message, type });
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -162,7 +162,7 @@ function AdminDashboard({ token, user, onRequireLogin }) {
           title: addForm.title.trim(),
           description: addForm.description.trim(),
           instructor: addForm.instructor.trim(),
-          category: addForm.category.trim() || 'General',
+          category: addForm.category.trim() || 'Computer Science',
           duration: addForm.duration.trim() || 'Self-paced',
           fee: Number(addForm.fee) || 0,
         }),
@@ -170,10 +170,10 @@ function AdminDashboard({ token, user, onRequireLogin }) {
 
       const data = await response.json();
       if (!response.ok) {
-        throw new Error(data.message || 'Failed to add course');
+        throw new Error(data.message || 'Failed to create course');
       }
 
-      showAlert(`Course "${data.course?.title || addForm.title}" created successfully!`, 'success');
+      showAlert(`Course "${data.course?.title || addForm.title}" created successfully.`, 'success');
       setShowAddModal(false);
       setAddForm({
         title: '',
@@ -194,15 +194,15 @@ function AdminDashboard({ token, user, onRequireLogin }) {
   // Open Edit Modal
   const openEditModal = (course) => {
     setEditingCourse(course);
-    setEditErrors({});
     setEditForm({
       title: course.title || '',
       description: course.description || '',
       instructor: course.instructor || '',
-      category: course.category || '',
+      category: course.category || 'Computer Science',
       duration: course.duration || 'Self-paced',
-      fee: course.fee !== undefined ? course.fee : 0,
+      fee: course.fee || 0,
     });
+    setEditErrors({});
   };
 
   // Handle Edit Course
@@ -217,7 +217,6 @@ function AdminDashboard({ token, user, onRequireLogin }) {
     }
     setEditErrors({});
 
-
     setSubmittingEdit(true);
     try {
       const response = await fetch(`${API_BASE_URL}/courses/${editingCourse._id}`, {
@@ -230,9 +229,9 @@ function AdminDashboard({ token, user, onRequireLogin }) {
           title: editForm.title.trim(),
           description: editForm.description.trim(),
           instructor: editForm.instructor.trim(),
-          category: editForm.category.trim() || 'General',
-          duration: editForm.duration.trim() || 'Self-paced',
-          fee: Number(editForm.fee) || 0,
+          category: editForm.category.trim(),
+          duration: editForm.duration.trim(),
+          fee: Number(editForm.fee),
         }),
       });
 
@@ -241,7 +240,7 @@ function AdminDashboard({ token, user, onRequireLogin }) {
         throw new Error(data.message || 'Failed to update course');
       }
 
-      showAlert(`Course "${editForm.title}" updated successfully!`, 'success');
+      showAlert(`Course "${editForm.title}" updated successfully.`, 'success');
       setEditingCourse(null);
       fetchCourses();
     } catch (err) {
@@ -277,7 +276,7 @@ function AdminDashboard({ token, user, onRequireLogin }) {
       const cascadeNote = data.deletedEnrollmentsCount
         ? ` (and cleaned up ${data.deletedEnrollmentsCount} student enrollment${data.deletedEnrollmentsCount > 1 ? 's' : ''})`
         : '';
-      showAlert(`Course "${deletingCourse.title}" deleted successfully${cascadeNote}!`, 'success');
+      showAlert(`Course "${deletingCourse.title}" deleted successfully${cascadeNote}.`, 'success');
       setDeletingCourse(null);
       fetchCourses();
     } catch (err) {
@@ -309,25 +308,33 @@ function AdminDashboard({ token, user, onRequireLogin }) {
     );
   });
 
+  const getInitials = (name) => {
+    if (!name) return 'ST';
+    return name
+      .split(' ')
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0].toUpperCase())
+      .join('');
+  };
 
   // Guard: if user is not admin
   if (!token || user?.role !== 'admin') {
     return (
       <div className="row justify-content-center my-5">
         <div className="col-12 col-md-8 col-lg-6 text-center">
-          <div className="foundation-card p-5 border border-danger">
-            <div className="display-4 text-danger mb-3">🛡️</div>
-            <h2 className="h4 text-white fw-bold mb-3">Administrator Access Required</h2>
-            <p className="text-secondary mb-4">
+          <div className="foundation-card p-5 border">
+            <h2 className="h4 fw-bold mb-3 text-slate-900">Administrator Access Required</h2>
+            <p className="text-secondary mb-4 small">
               This section is restricted to system administrators. Please sign in with an authorized
-              admin account to access course management and student records.
+              administrator account to access course management and student records.
             </p>
             <button
               type="button"
               className="btn btn-outline-danger px-4"
               onClick={onRequireLogin}
             >
-              Sign In with Admin Account
+              Sign In as Administrator
             </button>
           </div>
         </div>
@@ -337,26 +344,29 @@ function AdminDashboard({ token, user, onRequireLogin }) {
 
   return (
     <div className="admin-dashboard">
-      {/* Top Banner */}
-      <div className="d-flex flex-wrap justify-content-between align-items-center mb-4 pb-3 border-bottom border-secondary gap-3">
+      {/* Top Header */}
+      <div className="d-flex flex-wrap justify-content-between align-items-center mb-4 pb-3 border-bottom gap-3" style={{ borderColor: 'var(--border-color)' }}>
         <div>
           <div className="d-flex align-items-center gap-2 mb-1">
-            <h1 className="h3 fw-bold text-white mb-0">Admin Control Center</h1>
-            <span className="badge bg-danger text-uppercase px-2 py-1">Administrator</span>
+            <h1 className="h3 fw-bold text-slate-900 mb-0">Course Administration</h1>
+            <span className="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 px-2 py-1" style={{ fontSize: '0.7rem' }}>
+              Administrator
+            </span>
           </div>
           <p className="text-secondary mb-0 small">
-            Manage courses catalog, create & update offerings, and monitor registered students.
+            Manage course catalog, update curriculum offerings, and monitor student registrations.
           </p>
         </div>
 
-        <div className="d-flex align-items-center gap-2">
+        <div>
           <button
             type="button"
             id="admin-add-course-btn"
-            className="btn btn-primary d-flex align-items-center gap-2"
+            className="btn btn-accent d-flex align-items-center gap-2"
             onClick={() => setShowAddModal(true)}
           >
-            <span>➕</span> Add New Course
+            <PlusIcon size={16} />
+            <span>Add New Course</span>
           </button>
         </div>
       </div>
@@ -364,11 +374,11 @@ function AdminDashboard({ token, user, onRequireLogin }) {
       {/* Global Alert Notification */}
       {alert && (
         <div
-          className={`alert alert-${alert.type} alert-dismissible fade show d-flex align-items-center justify-content-between shadow-sm`}
+          className={`alert alert-${alert.type} alert-dismissible fade show d-flex align-items-center justify-content-between gap-2`}
           role="alert"
         >
           <div>
-            <strong>{alert.type === 'success' ? '✓ Success: ' : '⚠ Notice: '}</strong>
+            <strong>{alert.type === 'success' ? 'Success: ' : 'Notice: '}</strong>
             {alert.message}
           </div>
           <button
@@ -380,96 +390,92 @@ function AdminDashboard({ token, user, onRequireLogin }) {
         </div>
       )}
 
-      {/* Overview Stats Counters */}
+      {/* Stats Counters */}
       <div className="row g-3 mb-4">
         <div className="col-12 col-sm-6 col-lg-3">
-          <div className="foundation-card p-3 border-start border-primary border-4 h-100">
-            <small className="text-secondary text-uppercase fw-semibold d-block mb-1">Total Courses</small>
-            <div className="h3 text-white fw-bold mb-0">{loadingCourses ? '...' : courses.length}</div>
+          <div className="foundation-card p-3 h-100">
+            <span className="text-muted small text-uppercase fw-semibold d-block mb-1">Total Courses</span>
+            <div className="h3 text-slate-900 fw-bold mb-0">{loadingCourses ? '...' : courses.length}</div>
           </div>
         </div>
         <div className="col-12 col-sm-6 col-lg-3">
-          <div className="foundation-card p-3 border-start border-info border-4 h-100">
-            <small className="text-secondary text-uppercase fw-semibold d-block mb-1">Registered Students</small>
-            <div className="h3 text-white fw-bold mb-0">{loadingStudents ? '...' : students.length}</div>
+          <div className="foundation-card p-3 h-100">
+            <span className="text-muted small text-uppercase fw-semibold d-block mb-1">Registered Students</span>
+            <div className="h3 text-slate-900 fw-bold mb-0">{loadingStudents ? '...' : students.length}</div>
           </div>
         </div>
         <div className="col-12 col-sm-6 col-lg-3">
-          <div className="foundation-card p-3 border-start border-success border-4 h-100">
-            <small className="text-secondary text-uppercase fw-semibold d-block mb-1">Admin Session</small>
-            <div className="h6 text-success fw-bold mb-0 text-truncate">{user?.name || user?.email}</div>
+          <div className="foundation-card p-3 h-100">
+            <span className="text-muted small text-uppercase fw-semibold d-block mb-1">Active Session</span>
+            <div className="h6 text-slate-900 fw-bold mb-0 text-truncate">{user?.name || user?.email}</div>
           </div>
         </div>
         <div className="col-12 col-sm-6 col-lg-3">
-          <div className="foundation-card p-3 border-start border-warning border-4 h-100">
-            <small className="text-secondary text-uppercase fw-semibold d-block mb-1">Security Level</small>
-            <div className="h6 text-warning fw-bold mb-0">Role: admin (Verified)</div>
+          <div className="foundation-card p-3 h-100">
+            <span className="text-muted small text-uppercase fw-semibold d-block mb-1">Security Level</span>
+            <div className="h6 text-slate-900 fw-bold mb-0">Role: admin (Verified)</div>
           </div>
         </div>
       </div>
 
-      {/* Navigation Pills between Courses & Students */}
-      <ul className="nav nav-pills mb-4 gap-2 border-bottom border-secondary pb-3">
-        <li className="nav-item">
-          <button
-            type="button"
-            id="admin-tab-courses"
-            className={`btn ${activeTab === 'courses' ? 'btn-primary' : 'btn-outline-secondary'}`}
-            onClick={() => setActiveTab('courses')}
-          >
-            📚 Manage Courses ({courses.length})
-          </button>
-        </li>
-        <li className="nav-item">
-          <button
-            type="button"
-            id="admin-tab-students"
-            className={`btn ${activeTab === 'students' ? 'btn-primary' : 'btn-outline-secondary'}`}
-            onClick={() => setActiveTab('students')}
-          >
-            👥 View Registered Students ({students.length})
-          </button>
-        </li>
-      </ul>
+      {/* Navigation Switcher */}
+      <div className="d-flex flex-wrap gap-2 mb-4 border-bottom pb-3" style={{ borderColor: 'var(--border-color)' }}>
+        <button
+          type="button"
+          id="admin-tab-courses"
+          className={`btn btn-sm ${activeTab === 'courses' ? 'btn-accent' : 'btn-neutral'}`}
+          onClick={() => setActiveTab('courses')}
+        >
+          Courses Management ({courses.length})
+        </button>
+        <button
+          type="button"
+          id="admin-tab-students"
+          className={`btn btn-sm ${activeTab === 'students' ? 'btn-accent' : 'btn-neutral'}`}
+          onClick={() => setActiveTab('students')}
+        >
+          Registered Students ({students.length})
+        </button>
+      </div>
 
       {/* TAB 1: MANAGE COURSES */}
       {activeTab === 'courses' && (
-        <div className="foundation-card p-4">
+        <div className="foundation-card p-3 p-md-4">
           <div className="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-3">
             <div>
-              <h2 className="h5 text-white fw-bold mb-1">Courses Catalog Management</h2>
+              <h2 className="h5 fw-bold text-slate-900 mb-1">Course Catalog Directory</h2>
               <p className="text-secondary small mb-0">
-                Manage, edit, or delete existing course offerings.
+                View, modify details, or remove courses from the database.
               </p>
             </div>
 
-            <div className="d-flex gap-2">
+            <div className="d-flex flex-wrap gap-2 w-100 w-md-auto align-items-center">
               <input
                 type="text"
                 id="admin-course-search"
-                className="form-control form-control-sm bg-dark text-light border-secondary"
+                className="form-control form-control-sm flex-grow-1"
                 placeholder="Filter courses by title, instructor..."
                 value={courseSearch}
                 onChange={(e) => setCourseSearch(e.target.value)}
-                style={{ minWidth: '220px' }}
+                style={{ minWidth: '180px' }}
               />
               {courseSearch && (
                 <button
                   type="button"
-                  className="btn btn-outline-secondary btn-sm"
+                  className="btn btn-neutral btn-sm"
                   onClick={() => setCourseSearch('')}
                   title="Clear filter"
                 >
-                  ✕
+                  <CloseIcon size={14} />
                 </button>
               )}
               <button
                 type="button"
-                className="btn btn-outline-secondary btn-sm"
+                className="btn btn-neutral btn-sm flex-shrink-0"
                 onClick={fetchCourses}
                 disabled={loadingCourses}
               >
-                {loadingCourses ? '...' : '🔄 Refresh'}
+                {loadingCourses ? '...' : 'Refresh'}
               </button>
             </div>
           </div>
@@ -482,14 +488,12 @@ function AdminDashboard({ token, user, onRequireLogin }) {
 
           {loadingCourses ? (
             <div className="text-center py-5">
-              <div className="spinner-border text-primary" role="status">
-                <span className="visually-hidden">Loading courses...</span>
-              </div>
-              <p className="text-secondary mt-2 small">Loading course catalog...</p>
+              <div className="spinner-border text-secondary" role="status"></div>
+              <p className="text-muted mt-2 small">Loading course catalog...</p>
             </div>
           ) : filteredCourses.length === 0 ? (
             <div className="text-center py-5">
-              <p className="text-secondary mb-3">
+              <p className="text-secondary mb-3 small">
                 {courseSearch
                   ? `No courses match your filter "${courseSearch}".`
                   : 'No courses exist in the system yet.'}
@@ -497,7 +501,7 @@ function AdminDashboard({ token, user, onRequireLogin }) {
               {courseSearch ? (
                 <button
                   type="button"
-                  className="btn btn-outline-primary btn-sm"
+                  className="btn btn-outline-accent btn-sm"
                   onClick={() => setCourseSearch('')}
                 >
                   Clear Filter
@@ -505,49 +509,48 @@ function AdminDashboard({ token, user, onRequireLogin }) {
               ) : (
                 <button
                   type="button"
-                  className="btn btn-primary btn-sm"
+                  className="btn btn-accent btn-sm"
                   onClick={() => setShowAddModal(true)}
                 >
-                  ➕ Create the First Course
+                  Create First Course
                 </button>
               )}
             </div>
           ) : (
             <div className="table-responsive">
-              <table className="table table-dark table-hover align-middle mb-0" id="admin-courses-table">
+              <table className="table table-clean align-middle mb-0" id="admin-courses-table" style={{ minWidth: '650px' }}>
                 <thead>
-                  <tr className="border-secondary text-secondary small text-uppercase">
-                    <th scope="col" style={{ width: '28%' }}>Course Title & Category</th>
-                    <th scope="col" style={{ width: '18%' }}>Instructor</th>
-                    <th scope="col" style={{ width: '14%' }}>Duration</th>
-                    <th scope="col" style={{ width: '12%' }}>Fee</th>
-                    <th scope="col" style={{ width: '28%' }} className="text-end">Actions</th>
+                  <tr>
+                    <th scope="col" style={{ width: '32%' }}>Course Details</th>
+                    <th scope="col" style={{ width: '22%' }}>Instructor</th>
+                    <th scope="col" style={{ width: '16%' }}>Duration</th>
+                    <th scope="col" style={{ width: '12%' }}>Fee (INR)</th>
+                    <th scope="col" style={{ width: '18%' }} className="text-end">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredCourses.map((course) => (
-                    <tr key={course._id} className="border-secondary">
-
+                    <tr key={course._id}>
                       <td>
-                        <div className="fw-bold text-white mb-1">{course.title}</div>
-                        <span className="badge bg-secondary text-light small me-2">
+                        <div className="fw-bold text-slate-900 mb-1">{course.title}</div>
+                        <span className="badge bg-light text-secondary border me-2 small">
                           {course.category}
                         </span>
-                        <small className="text-muted d-block text-truncate mt-1" style={{ maxWidth: '340px' }}>
+                        <small className="text-muted d-block text-truncate mt-1" style={{ maxWidth: '320px' }}>
                           {course.description}
                         </small>
                       </td>
                       <td>
-                        <span className="text-light">{course.instructor}</span>
+                        <span className="text-slate-900">{course.instructor}</span>
                       </td>
                       <td>
-                        <span className="badge bg-black bg-opacity-50 border border-secondary text-info">
-                          ⏱ {course.duration || 'Self-paced'}
+                        <span className="badge bg-white text-secondary border">
+                          {course.duration || 'Self-paced'}
                         </span>
                       </td>
                       <td>
-                        <span className="fw-semibold text-success">
-                          {course.fee > 0 ? `$${course.fee}` : 'Free'}
+                        <span className="fw-bold text-slate-900">
+                          {formatPriceINR(course.fee)}
                         </span>
                       </td>
                       <td className="text-end">
@@ -555,18 +558,20 @@ function AdminDashboard({ token, user, onRequireLogin }) {
                           <button
                             type="button"
                             id={`edit-course-${course._id}`}
-                            className="btn btn-outline-info"
+                            className="btn btn-neutral d-flex align-items-center gap-1"
                             onClick={() => openEditModal(course)}
                           >
-                            ✏️ Edit
+                            <EditIcon size={13} />
+                            <span>Edit</span>
                           </button>
                           <button
                             type="button"
                             id={`delete-course-${course._id}`}
-                            className="btn btn-outline-danger"
+                            className="btn btn-outline-danger d-flex align-items-center gap-1"
                             onClick={() => openDeleteModal(course)}
                           >
-                            🗑️ Delete
+                            <TrashIcon size={13} />
+                            <span>Delete</span>
                           </button>
                         </div>
                       </td>
@@ -581,31 +586,31 @@ function AdminDashboard({ token, user, onRequireLogin }) {
 
       {/* TAB 2: REGISTERED STUDENTS */}
       {activeTab === 'students' && (
-        <div className="foundation-card p-4">
+        <div className="foundation-card p-3 p-md-4">
           <div className="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-3">
             <div>
-              <h2 className="h5 text-white fw-bold mb-1">Registered Students Directory</h2>
+              <h2 className="h5 fw-bold text-slate-900 mb-1">Student Directory</h2>
               <p className="text-secondary small mb-0">
-                Live list of students registered in the system (<code className="text-info">GET /students</code>). Passwords strictly excluded.
+                Directory of registered students (<code className="text-muted">GET /students</code>). Passwords strictly excluded.
               </p>
             </div>
 
-            <div className="d-flex gap-2">
+            <div className="d-flex flex-wrap gap-2 w-100 w-md-auto align-items-center">
               <input
                 type="text"
-                className="form-control form-control-sm bg-dark text-light border-secondary"
+                className="form-control form-control-sm flex-grow-1"
                 placeholder="Search students by name or email..."
                 value={studentSearch}
                 onChange={(e) => setStudentSearch(e.target.value)}
-                style={{ minWidth: '240px' }}
+                style={{ minWidth: '180px' }}
               />
               <button
                 type="button"
-                className="btn btn-outline-secondary btn-sm"
+                className="btn btn-neutral btn-sm flex-shrink-0"
                 onClick={fetchStudents}
                 disabled={loadingStudents}
               >
-                🔄 Refresh
+                Refresh
               </button>
             </div>
           </div>
@@ -618,22 +623,20 @@ function AdminDashboard({ token, user, onRequireLogin }) {
 
           {loadingStudents ? (
             <div className="text-center py-5">
-              <div className="spinner-border text-info" role="status">
-                <span className="visually-hidden">Loading students...</span>
-              </div>
-              <p className="text-secondary mt-2 small">Loading registered students...</p>
+              <div className="spinner-border text-secondary" role="status"></div>
+              <p className="text-muted mt-2 small">Loading student records...</p>
             </div>
           ) : filteredStudents.length === 0 ? (
             <div className="text-center py-5">
-              <p className="text-secondary mb-0">
+              <p className="text-secondary mb-0 small">
                 {studentSearch ? 'No registered students match your search filter.' : 'No registered students found in database.'}
               </p>
             </div>
           ) : (
             <div className="table-responsive">
-              <table className="table table-dark table-hover align-middle mb-0" id="admin-students-table">
+              <table className="table table-clean align-middle mb-0" id="admin-students-table" style={{ minWidth: '580px' }}>
                 <thead>
-                  <tr className="border-secondary text-secondary small text-uppercase">
+                  <tr>
                     <th scope="col" style={{ width: '8%' }}>#</th>
                     <th scope="col" style={{ width: '32%' }}>Student Name</th>
                     <th scope="col" style={{ width: '35%' }}>Email Address</th>
@@ -643,18 +646,25 @@ function AdminDashboard({ token, user, onRequireLogin }) {
                 </thead>
                 <tbody>
                   {filteredStudents.map((student, idx) => (
-                    <tr key={student._id || idx} className="border-secondary">
-                      <td className="text-secondary">{idx + 1}</td>
+                    <tr key={student._id || idx}>
+                      <td className="text-muted small">{idx + 1}</td>
                       <td>
-                        <strong className="text-white">{student.name}</strong>
+                        <div className="d-flex align-items-center gap-2">
+                          <span className="avatar-initials" style={{ width: '28px', height: '28px', fontSize: '0.72rem' }}>
+                            {getInitials(student.name)}
+                          </span>
+                          <strong className="text-slate-900">{student.name}</strong>
+                        </div>
                       </td>
                       <td>
-                        <span className="text-info">{student.email}</span>
+                        <span className="text-muted">{student.email}</span>
                       </td>
                       <td>
-                        <span className="badge bg-primary text-uppercase">{student.role || 'student'}</span>
+                        <span className="badge bg-white text-secondary border text-uppercase" style={{ fontSize: '0.68rem' }}>
+                          {student.role || 'student'}
+                        </span>
                       </td>
-                      <td className="text-end text-secondary small">
+                      <td className="text-end text-muted small">
                         {student.createdAt
                           ? new Date(student.createdAt).toLocaleDateString(undefined, {
                               year: 'numeric',
@@ -673,38 +683,40 @@ function AdminDashboard({ token, user, onRequireLogin }) {
       )}
 
       {/* ========================================================= */}
-      {/* MODAL: ADD COURSE */}
+      {/* MODAL: ADD COURSE                                         */}
       {/* ========================================================= */}
       {showAddModal && (
         <div
           className="modal fade show d-block"
           tabIndex="-1"
-          style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}
+          style={{ backgroundColor: 'rgba(31, 41, 55, 0.6)' }}
           role="dialog"
           aria-modal="true"
         >
-          <div className="modal-dialog modal-dialog-centered modal-lg">
-            <div className="modal-content bg-dark text-white border border-secondary">
-              <div className="modal-header border-secondary">
-                <h5 className="modal-title fw-bold">➕ Add New Course</h5>
+          <div className="modal-dialog modal-dialog-centered modal-lg mx-2 mx-sm-auto">
+            <div className="modal-content">
+              <div className="modal-header d-flex justify-content-between align-items-center">
+                <h5 className="modal-title fw-bold text-slate-900 mb-0">Add New Course</h5>
                 <button
                   type="button"
-                  className="btn-close btn-close-white"
+                  className="btn btn-link p-1 text-muted"
                   aria-label="Close"
                   onClick={() => setShowAddModal(false)}
-                ></button>
+                >
+                  <CloseIcon size={20} />
+                </button>
               </div>
               <form onSubmit={handleAddSubmit} noValidate>
-                <div className="modal-body">
+                <div className="modal-body p-3 p-sm-4">
                   <div className="mb-3">
-                    <label htmlFor="add-title" className="form-label text-secondary small">
+                    <label htmlFor="add-title" className="form-label">
                       Course Title <span className="text-danger">*</span>
                     </label>
                     <input
                       type="text"
                       id="add-title"
-                      className={`form-control bg-black bg-opacity-25 text-white border-secondary ${addErrors.title ? 'is-invalid' : ''}`}
-                      placeholder="e.g., Full Stack Web Development with React and Node"
+                      className={`form-control ${addErrors.title ? 'is-invalid' : ''}`}
+                      placeholder="e.g., Full Stack Web Development"
                       value={addForm.title}
                       onChange={(e) => {
                         setAddForm({ ...addForm, title: e.target.value });
@@ -717,13 +729,13 @@ function AdminDashboard({ token, user, onRequireLogin }) {
                   </div>
 
                   <div className="mb-3">
-                    <label htmlFor="add-description" className="form-label text-secondary small">
-                      Description <span className="text-danger">*</span>
+                    <label htmlFor="add-description" className="form-label">
+                      Course Description <span className="text-danger">*</span>
                     </label>
                     <textarea
                       id="add-description"
                       rows="3"
-                      className={`form-control bg-black bg-opacity-25 text-white border-secondary ${addErrors.description ? 'is-invalid' : ''}`}
+                      className={`form-control ${addErrors.description ? 'is-invalid' : ''}`}
                       placeholder="Provide a comprehensive summary of what students will learn..."
                       value={addForm.description}
                       onChange={(e) => {
@@ -737,15 +749,15 @@ function AdminDashboard({ token, user, onRequireLogin }) {
                   </div>
 
                   <div className="row g-3 mb-3">
-                    <div className="col-md-6">
-                      <label htmlFor="add-instructor" className="form-label text-secondary small">
+                    <div className="col-12 col-md-6">
+                      <label htmlFor="add-instructor" className="form-label">
                         Instructor Name <span className="text-danger">*</span>
                       </label>
                       <input
                         type="text"
                         id="add-instructor"
-                        className={`form-control bg-black bg-opacity-25 text-white border-secondary ${addErrors.instructor ? 'is-invalid' : ''}`}
-                        placeholder="e.g., Dr. Jane Doe"
+                        className={`form-control ${addErrors.instructor ? 'is-invalid' : ''}`}
+                        placeholder="e.g., Dr. Angela Yu"
                         value={addForm.instructor}
                         onChange={(e) => {
                           setAddForm({ ...addForm, instructor: e.target.value });
@@ -756,45 +768,51 @@ function AdminDashboard({ token, user, onRequireLogin }) {
                         <div className="invalid-feedback">{addErrors.instructor}</div>
                       )}
                     </div>
-                    <div className="col-md-6">
-                      <label htmlFor="add-category" className="form-label text-secondary small">
+
+                    <div className="col-12 col-md-6">
+                      <label htmlFor="add-category" className="form-label">
                         Category
                       </label>
-                      <input
-                        type="text"
+                      <select
                         id="add-category"
-                        className="form-control bg-black bg-opacity-25 text-white border-secondary"
-                        placeholder="e.g., Computer Science, Data, Cloud"
+                        className="form-select"
                         value={addForm.category}
                         onChange={(e) => setAddForm({ ...addForm, category: e.target.value })}
-                      />
+                      >
+                        <option value="Web Development">Web Development</option>
+                        <option value="Programming">Programming</option>
+                        <option value="Data Science">Data Science</option>
+                        <option value="Cloud Computing">Cloud Computing</option>
+                        <option value="Software Engineering">Software Engineering</option>
+                        <option value="Computer Science">Computer Science</option>
+                      </select>
                     </div>
                   </div>
 
                   <div className="row g-3">
-                    <div className="col-md-6">
-                      <label htmlFor="add-duration" className="form-label text-secondary small">
+                    <div className="col-12 col-md-6">
+                      <label htmlFor="add-duration" className="form-label">
                         Duration
                       </label>
                       <input
                         type="text"
                         id="add-duration"
-                        className="form-control bg-black bg-opacity-25 text-white border-secondary"
-                        placeholder="e.g., 6 Weeks, Self-paced"
+                        className="form-control"
+                        placeholder="e.g., 8 Weeks or Self-paced"
                         value={addForm.duration}
                         onChange={(e) => setAddForm({ ...addForm, duration: e.target.value })}
                       />
                     </div>
-                    <div className="col-md-6">
-                      <label htmlFor="add-fee" className="form-label text-secondary small">
-                        Course Fee ($)
+
+                    <div className="col-12 col-md-6">
+                      <label htmlFor="add-fee" className="form-label">
+                        Tuition Fee (₹)
                       </label>
                       <input
                         type="number"
                         id="add-fee"
                         min="0"
-                        step="1"
-                        className={`form-control bg-black bg-opacity-25 text-white border-secondary ${addErrors.fee ? 'is-invalid' : ''}`}
+                        className={`form-control ${addErrors.fee ? 'is-invalid' : ''}`}
                         placeholder="0 for Free"
                         value={addForm.fee}
                         onChange={(e) => {
@@ -808,11 +826,12 @@ function AdminDashboard({ token, user, onRequireLogin }) {
                     </div>
                   </div>
                 </div>
-                <div className="modal-footer border-secondary">
+
+                <div className="modal-footer">
                   <button
                     type="button"
-                    className="btn btn-outline-secondary"
-                    onClick={() => { setShowAddModal(false); setAddErrors({}); }}
+                    className="btn btn-neutral btn-sm"
+                    onClick={() => setShowAddModal(false)}
                     disabled={submittingAdd}
                   >
                     Cancel
@@ -820,51 +839,52 @@ function AdminDashboard({ token, user, onRequireLogin }) {
                   <button
                     type="submit"
                     id="submit-add-course-btn"
-                    className="btn btn-primary"
+                    className="btn btn-accent btn-sm px-4"
                     disabled={submittingAdd}
                   >
-                    {submittingAdd ? 'Creating Course...' : 'Create Course'}
+                    {submittingAdd ? 'Creating...' : 'Create Course'}
                   </button>
                 </div>
               </form>
-
             </div>
           </div>
         </div>
       )}
 
       {/* ========================================================= */}
-      {/* MODAL: EDIT COURSE */}
+      {/* MODAL: EDIT COURSE                                        */}
       {/* ========================================================= */}
       {editingCourse && (
         <div
           className="modal fade show d-block"
           tabIndex="-1"
-          style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}
+          style={{ backgroundColor: 'rgba(31, 41, 55, 0.6)' }}
           role="dialog"
           aria-modal="true"
         >
-          <div className="modal-dialog modal-dialog-centered modal-lg">
-            <div className="modal-content bg-dark text-white border border-secondary">
-              <div className="modal-header border-secondary">
-                <h5 className="modal-title fw-bold">✏️ Edit Course</h5>
+          <div className="modal-dialog modal-dialog-centered modal-lg mx-2 mx-sm-auto">
+            <div className="modal-content">
+              <div className="modal-header d-flex justify-content-between align-items-center">
+                <h5 className="modal-title fw-bold text-slate-900 mb-0">Edit Course Offering</h5>
                 <button
                   type="button"
-                  className="btn-close btn-close-white"
+                  className="btn btn-link p-1 text-muted"
                   aria-label="Close"
                   onClick={() => setEditingCourse(null)}
-                ></button>
+                >
+                  <CloseIcon size={20} />
+                </button>
               </div>
               <form onSubmit={handleEditSubmit} noValidate>
-                <div className="modal-body">
+                <div className="modal-body p-3 p-sm-4">
                   <div className="mb-3">
-                    <label htmlFor="edit-title" className="form-label text-secondary small">
+                    <label htmlFor="edit-title" className="form-label">
                       Course Title <span className="text-danger">*</span>
                     </label>
                     <input
                       type="text"
                       id="edit-title"
-                      className={`form-control bg-black bg-opacity-25 text-white border-secondary ${editErrors.title ? 'is-invalid' : ''}`}
+                      className={`form-control ${editErrors.title ? 'is-invalid' : ''}`}
                       value={editForm.title}
                       onChange={(e) => {
                         setEditForm({ ...editForm, title: e.target.value });
@@ -877,13 +897,13 @@ function AdminDashboard({ token, user, onRequireLogin }) {
                   </div>
 
                   <div className="mb-3">
-                    <label htmlFor="edit-description" className="form-label text-secondary small">
-                      Description <span className="text-danger">*</span>
+                    <label htmlFor="edit-description" className="form-label">
+                      Course Description <span className="text-danger">*</span>
                     </label>
                     <textarea
                       id="edit-description"
                       rows="3"
-                      className={`form-control bg-black bg-opacity-25 text-white border-secondary ${editErrors.description ? 'is-invalid' : ''}`}
+                      className={`form-control ${editErrors.description ? 'is-invalid' : ''}`}
                       value={editForm.description}
                       onChange={(e) => {
                         setEditForm({ ...editForm, description: e.target.value });
@@ -896,14 +916,14 @@ function AdminDashboard({ token, user, onRequireLogin }) {
                   </div>
 
                   <div className="row g-3 mb-3">
-                    <div className="col-md-6">
-                      <label htmlFor="edit-instructor" className="form-label text-secondary small">
+                    <div className="col-12 col-md-6">
+                      <label htmlFor="edit-instructor" className="form-label">
                         Instructor Name <span className="text-danger">*</span>
                       </label>
                       <input
                         type="text"
                         id="edit-instructor"
-                        className={`form-control bg-black bg-opacity-25 text-white border-secondary ${editErrors.instructor ? 'is-invalid' : ''}`}
+                        className={`form-control ${editErrors.instructor ? 'is-invalid' : ''}`}
                         value={editForm.instructor}
                         onChange={(e) => {
                           setEditForm({ ...editForm, instructor: e.target.value });
@@ -914,43 +934,50 @@ function AdminDashboard({ token, user, onRequireLogin }) {
                         <div className="invalid-feedback">{editErrors.instructor}</div>
                       )}
                     </div>
-                    <div className="col-md-6">
-                      <label htmlFor="edit-category" className="form-label text-secondary small">
+
+                    <div className="col-12 col-md-6">
+                      <label htmlFor="edit-category" className="form-label">
                         Category
                       </label>
-                      <input
-                        type="text"
+                      <select
                         id="edit-category"
-                        className="form-control bg-black bg-opacity-25 text-white border-secondary"
+                        className="form-select"
                         value={editForm.category}
                         onChange={(e) => setEditForm({ ...editForm, category: e.target.value })}
-                      />
+                      >
+                        <option value="Web Development">Web Development</option>
+                        <option value="Programming">Programming</option>
+                        <option value="Data Science">Data Science</option>
+                        <option value="Cloud Computing">Cloud Computing</option>
+                        <option value="Software Engineering">Software Engineering</option>
+                        <option value="Computer Science">Computer Science</option>
+                      </select>
                     </div>
                   </div>
 
                   <div className="row g-3">
-                    <div className="col-md-6">
-                      <label htmlFor="edit-duration" className="form-label text-secondary small">
+                    <div className="col-12 col-md-6">
+                      <label htmlFor="edit-duration" className="form-label">
                         Duration
                       </label>
                       <input
                         type="text"
                         id="edit-duration"
-                        className="form-control bg-black bg-opacity-25 text-white border-secondary"
+                        className="form-control"
                         value={editForm.duration}
                         onChange={(e) => setEditForm({ ...editForm, duration: e.target.value })}
                       />
                     </div>
-                    <div className="col-md-6">
-                      <label htmlFor="edit-fee" className="form-label text-secondary small">
-                        Course Fee ($)
+
+                    <div className="col-12 col-md-6">
+                      <label htmlFor="edit-fee" className="form-label">
+                        Tuition Fee (₹)
                       </label>
                       <input
                         type="number"
                         id="edit-fee"
                         min="0"
-                        step="1"
-                        className={`form-control bg-black bg-opacity-25 text-white border-secondary ${editErrors.fee ? 'is-invalid' : ''}`}
+                        className={`form-control ${editErrors.fee ? 'is-invalid' : ''}`}
                         value={editForm.fee}
                         onChange={(e) => {
                           setEditForm({ ...editForm, fee: e.target.value });
@@ -963,11 +990,12 @@ function AdminDashboard({ token, user, onRequireLogin }) {
                     </div>
                   </div>
                 </div>
-                <div className="modal-footer border-secondary">
+
+                <div className="modal-footer">
                   <button
                     type="button"
-                    className="btn btn-outline-secondary"
-                    onClick={() => { setEditingCourse(null); setEditErrors({}); }}
+                    className="btn btn-neutral btn-sm"
+                    onClick={() => setEditingCourse(null)}
                     disabled={submittingEdit}
                   >
                     Cancel
@@ -975,58 +1003,54 @@ function AdminDashboard({ token, user, onRequireLogin }) {
                   <button
                     type="submit"
                     id="submit-edit-course-btn"
-                    className="btn btn-primary"
+                    className="btn btn-accent btn-sm px-4"
                     disabled={submittingEdit}
                   >
-                    {submittingEdit ? 'Saving Changes...' : 'Save Changes'}
+                    {submittingEdit ? 'Saving...' : 'Save Changes'}
                   </button>
                 </div>
               </form>
-
             </div>
           </div>
         </div>
       )}
 
       {/* ========================================================= */}
-      {/* MODAL: DELETE CONFIRMATION */}
+      {/* MODAL: DELETE COURSE CONFIRMATION                         */}
       {/* ========================================================= */}
       {deletingCourse && (
         <div
           className="modal fade show d-block"
           tabIndex="-1"
-          style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}
+          style={{ backgroundColor: 'rgba(31, 41, 55, 0.6)' }}
           role="dialog"
           aria-modal="true"
         >
-          <div className="modal-dialog modal-dialog-centered">
-            <div className="modal-content bg-dark text-white border border-danger">
-              <div className="modal-header border-secondary">
-                <h5 className="modal-title fw-bold text-danger">⚠️ Confirm Course Deletion</h5>
+          <div className="modal-dialog modal-dialog-centered mx-2 mx-sm-auto">
+            <div className="modal-content">
+              <div className="modal-header d-flex justify-content-between align-items-center">
+                <h5 className="modal-title fw-bold text-danger mb-0">Confirm Course Deletion</h5>
                 <button
                   type="button"
-                  className="btn-close btn-close-white"
+                  className="btn btn-link p-1 text-muted"
                   aria-label="Close"
                   onClick={() => setDeletingCourse(null)}
-                ></button>
+                >
+                  <CloseIcon size={20} />
+                </button>
               </div>
-              <div className="modal-body">
-                <p className="mb-2">
-                  Are you sure you want to permanently delete:
+              <div className="modal-body p-3 p-sm-4">
+                <p className="text-secondary mb-3">
+                  Are you sure you want to delete the course <strong>"{deletingCourse.title}"</strong>?
                 </p>
-                <div className="p-3 bg-black bg-opacity-50 border border-secondary rounded mb-3">
-                  <strong className="text-white d-block">{deletingCourse.title}</strong>
-                  <small className="text-secondary">Instructor: {deletingCourse.instructor}</small>
-                </div>
-                <div className="alert alert-warning py-2 mb-0 small">
-                  <strong>Notice:</strong> Deleting this course will also cascade delete all associated
-                  student enrollments from their dashboards.
+                <div className="alert alert-warning small mb-0">
+                  This action will remove the course and automatically clean up associated student enrollment records.
                 </div>
               </div>
-              <div className="modal-footer border-secondary">
+              <div className="modal-footer">
                 <button
                   type="button"
-                  className="btn btn-outline-secondary"
+                  className="btn btn-neutral btn-sm"
                   onClick={() => setDeletingCourse(null)}
                   disabled={submittingDelete}
                 >
@@ -1035,11 +1059,11 @@ function AdminDashboard({ token, user, onRequireLogin }) {
                 <button
                   type="button"
                   id="confirm-delete-course-btn"
-                  className="btn btn-danger"
+                  className="btn btn-danger btn-sm px-4"
                   onClick={handleDeleteConfirm}
                   disabled={submittingDelete}
                 >
-                  {submittingDelete ? 'Deleting...' : 'Confirm Delete'}
+                  {submittingDelete ? 'Deleting...' : 'Delete Course'}
                 </button>
               </div>
             </div>
